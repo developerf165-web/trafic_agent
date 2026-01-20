@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy import Column, String, ForeignKey, DateTime, Integer, Numeric, Date, Enum, BigInteger, Boolean
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
@@ -15,7 +15,7 @@ class User(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, index=True, nullable=False)
-    username = Column(String, unique=True, index=True, nullable=True) # Temporarily nullable for migration
+    username = Column(String, unique=True, index=True, nullable=True)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     password_hash = Column(String, nullable=False)
@@ -80,8 +80,12 @@ class Integration(Base):
     agency_client_login = Column(String, nullable=True) # Logic login of the sub-client for Agency tokens
 
     # Goals Support
-    selected_goals = Column(String, nullable=True) # JSON list of goal IDs
+    selected_goals = Column(JSONB, nullable=True) # List of goal IDs or complex JSON
     primary_goal_id = Column(String, nullable=True)
+    
+    # Financial info (cached from platform during sync)
+    balance = Column(Numeric(20, 2), nullable=True)
+    currency = Column(String, nullable=True)
 
     client = relationship("Client", back_populates="integrations")
     campaigns = relationship("Campaign", back_populates="integration", cascade="all, delete-orphan")
@@ -93,6 +97,11 @@ class Campaign(Base):
     integration_id = Column(UUID(as_uuid=True), ForeignKey("integrations.id", ondelete="CASCADE"), index=True)
     external_id = Column(String, nullable=False) # Campaign ID from the platform
     name = Column(String, nullable=False)
+    type = Column(String, nullable=True)
+    status = Column(String, nullable=True)
+    state = Column(String, nullable=True)
+    daily_budget = Column(Numeric(20, 2), nullable=True)
+    strategy = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

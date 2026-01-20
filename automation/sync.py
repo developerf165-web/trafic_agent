@@ -44,6 +44,26 @@ async def sync_integration(db: Session, integration: models.Integration, date_fr
         if integration.platform == models.IntegrationPlatform.YANDEX_DIRECT:
             access_token = security.decrypt_token(integration.access_token)
             api = YandexDirectAPI(access_token, integration.agency_client_login)
+            
+            # 1. Refresh Account Info (Balance, Currency)
+            try:
+                acc_info = await api.get_account_info()
+                if acc_info:
+                    integration.currency = acc_info.get("currency")
+                    integration.balance = acc_info.get("balance")
+                    db.flush()
+            except Exception as e:
+                logger.warning(f"Failed to refresh account info for {integration.id}: {e}")
+
+            # 2. Refresh Campaign Metadata
+            rich_campaigns = {}
+            try:
+                # Fetch all campaigns with rich metadata (no date range needed for metadata refresh)
+                c_list = await api.get_campaigns()
+                rich_campaigns = {str(c.id): c for c in c_list}
+            except Exception as e:
+                logger.warning(f"Failed to refresh campaign metadata for {integration.id}: {e}")
+
             try:
                 log_event("sync", f"fetching yandex report for {integration.id}")
                 stats = await api.get_report(date_from, date_to)
@@ -69,12 +89,14 @@ async def sync_integration(db: Session, integration: models.Integration, date_fr
                     raise e
 
             for s in stats:
-                # 1. Ensure Campaign exists
+                # 1. Ensure Campaign exists and has latest metadata
                 campaign_external_id = str(s['campaign_id'])
                 campaign = db.query(models.Campaign).filter_by(
                     integration_id=integration.id,
                     external_id=campaign_external_id
                 ).first()
+                
+                rich_c = rich_campaigns.get(campaign_external_id)
                 
                 if not campaign:
                     campaign = models.Campaign(
@@ -83,10 +105,23 @@ async def sync_integration(db: Session, integration: models.Integration, date_fr
                         name=s['campaign_name'],
                         is_active=True
                     )
+                    if rich_c:
+                        campaign.type = rich_c.type
+                        campaign.status = rich_c.status
+                        campaign.state = rich_c.state
+                        campaign.daily_budget = rich_c.daily_budget
+                        campaign.strategy = rich_c.strategy
                     db.add(campaign)
                     db.flush()
-                elif campaign.name != s['campaign_name']:
+                else:
+                    # Update metadata even if campaign exists
                     campaign.name = s['campaign_name']
+                    if rich_c:
+                        campaign.type = rich_c.type
+                        campaign.status = rich_c.status
+                        campaign.state = rich_c.state
+                        campaign.daily_budget = rich_c.daily_budget
+                        campaign.strategy = rich_c.strategy
                     db.flush()
 
                 # OPTIMIZATION: Only sync data for active campaigns

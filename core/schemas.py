@@ -74,6 +74,15 @@ class IntegrationResponse(IntegrationBase):
     access_token: str
     selected_goals: Optional[List[str]] = None
     primary_goal_id: Optional[str] = None
+    
+    # Financial info
+    balance: Optional[float] = None
+    currency: Optional[str] = None
+    
+    # Agency Mode
+    is_agency: bool = False
+    agency_client_login: Optional[str] = None
+    
     campaigns: List["CampaignResponse"] = []
     
     class Config:
@@ -96,6 +105,11 @@ class CampaignUpdate(BaseModel):
 class CampaignResponse(CampaignBase):
     id: UUID
     integration_id: UUID
+    type: Optional[str] = None
+    status: Optional[str] = None
+    state: Optional[str] = None
+    daily_budget: Optional[float] = None
+    strategy: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -122,6 +136,8 @@ class StatsSummary(BaseModel):
     cpa: float
     ctr: float = 0
     cr: float = 0
+    balance: float = 0
+    currency: str = "RUB"
     trends: Optional[StatsTrend] = None
 
 # Client Schemas

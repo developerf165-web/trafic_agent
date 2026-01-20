@@ -14,17 +14,10 @@
              <PlatformIcon :platform="modelValue.platform" class="w-10 h-10 brightness-0 invert" />
           </div>
           <div class="flex-grow">
-            <h2 class="text-xl font-black mb-1 tracking-tight">Интеграция с {{ PLATFORMS[modelValue.platform]?.label }}</h2>
+            <h2 class="text-xl font-black mb-1 tracking-tight">Настройка {{ PLATFORMS[modelValue.platform]?.label }}</h2>
             <p class="text-blue-100 text-[11px] font-bold max-w-lg leading-relaxed">
-              Автоматический сбор кампаний, ключевых слов и статистики.
-              <a href="#" class="text-white underline underline-offset-4 decoration-white/30 hover:decoration-white transition-all ml-1">Как это работает?</a>
+              {{ isCreatingNewProject ? 'Создайте новый проект для отслеживания данных' : 'Выберите существующий проект или создайте новый' }}
             </p>
-          </div>
-          <div class="hidden md:flex flex-col items-center gap-2">
-            <div class="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20">
-              <div class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_#4ade80]"></div>
-              <span class="text-[9px] font-black uppercase tracking-widest text-white/90">API: СОЕДИНЕНО</span>
-            </div>
           </div>
         </div>
       </div>
@@ -32,40 +25,27 @@
       <!-- Platform Selection Grid -->
       <div class="space-y-4">
         <label class="block text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 px-1">ВЫБЕРИТЕ РЕКЛАМНЫЙ КАНАЛ</label>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <div 
             v-for="(config, key) in PLATFORMS" 
             :key="key"
             @click="!config.comingSoon && updateForm({ platform: key })"
-            class="relative group p-4 bg-white border-2 rounded-[1.5rem] transition-all duration-300 cursor-pointer overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1"
+            class="relative group p-3 bg-white border-2 rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden"
             :class="[
-              modelValue.platform === key ? 'border-blue-600 ring-4 ring-blue-50' : 'border-gray-50 hover:border-blue-200',
-              config.comingSoon ? 'opacity-50 cursor-not-allowed filter grayscale' : ''
+              modelValue.platform === key ? 'border-blue-600 ring-4 ring-blue-50 shadow-md' : 'border-gray-50 opacity-60 hover:opacity-100 hover:border-blue-200',
+              config.comingSoon ? 'opacity-30 cursor-not-allowed filter grayscale pointer-events-none' : ''
             ]"
           >
-            <!-- Selection Checkmark -->
-            <div 
-              class="absolute top-4 right-4 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center transition-all duration-300 scale-0"
-              :class="{ 'scale-100': modelValue.platform === key }"
-            >
-              <CheckIcon class="w-4 h-4 text-white" stroke-width="4" />
-            </div>
-
-            <div class="flex flex-col h-full">
-              <div class="mb-4">
-                <div 
-                  class="w-12 h-12 rounded-2xl flex items-center justify-center text-[14px] font-black transition-all group-hover:scale-110 shadow-inner"
-                  :class="config.className"
-                >
-                  {{ config.initials }}
-                </div>
+            <div class="flex items-center gap-3">
+              <div 
+                class="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black transition-all group-hover:scale-105"
+                :class="config.className"
+              >
+                {{ config.initials }}
               </div>
-              
-              <div class="space-y-1">
-                <h3 class="text-[13px] font-black text-black uppercase tracking-tight">{{ config.label }}</h3>
-                <p class="text-[10px] font-bold text-gray-400 leading-tight pr-4">
-                  {{ config.comingSoon ? 'СКОРО БУДЕТ' : config.description }}
-                </p>
+              <div class="flex flex-col">
+                <h3 class="text-[11px] font-black text-black uppercase tracking-tight leading-none mb-1">{{ config.label }}</h3>
+                <span class="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{{ config.comingSoon ? 'Скоро' : 'Доступно' }}</span>
               </div>
             </div>
           </div>
@@ -89,7 +69,15 @@
                 placeholder="Поиск проекта..."
                 class="w-full pl-11 pr-12 py-4 bg-white border border-gray-100 rounded-[1.25rem] focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold text-[14px] text-gray-900 shadow-sm"
               >
-              <div class="absolute inset-y-0 right-0 pr-4 flex items-center">
+              <div class="absolute inset-y-0 right-0 pr-2 flex items-center gap-1">
+                <button 
+                  v-if="projectSearchQuery"
+                  type="button"
+                  @click="clearProjectSearch"
+                  class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
+                >
+                  <XMarkIcon class="h-4 w-4" />
+                </button>
                 <button 
                   type="button"
                   @click="isDropdownOpen = !isDropdownOpen"
@@ -197,7 +185,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/vue/20/solid'
+import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/vue/20/solid'
 import { CheckIcon, PlusIcon } from '@heroicons/vue/24/outline'
 import { PLATFORMS } from '../../constants/platformConfig'
 import Input from '../../views/Settings/components/Input.vue'
@@ -248,6 +236,11 @@ const handleCreateNewAction = () => {
   updateForm({ client_id: null, client_name: '' })
   projectSearchQuery.value = ''
   isDropdownOpen.value = false
+}
+
+const clearProjectSearch = () => {
+  projectSearchQuery.value = ''
+  updateForm({ client_id: null, client_name: '' })
 }
 
 const updateForm = (updates) => {

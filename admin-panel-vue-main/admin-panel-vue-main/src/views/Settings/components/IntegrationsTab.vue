@@ -171,12 +171,6 @@
       </div>
     </div>
 
-    <UnifiedConnectModal 
-      v-model:is-open="showAddModal" 
-      :resume-integration-id="resumeIntegrationId"
-      :initial-step="initialStep"
-      @success="handleIntegrationSuccess" 
-    />
     <AgencyImportModal ref="agencyModalRef" v-model:is-open="isAgencyModalOpen" @success="fetchIntegrations" />
   </div>
 </template>
@@ -186,13 +180,11 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { PlusIcon, EllipsisVerticalIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import api from '../../../api/axios'
-import UnifiedConnectModal from '../../../components/UnifiedConnectModal.vue'
 import AgencyImportModal from '../../../components/AgencyImportModal.vue'
 import { useToaster } from '../../../composables/useToaster'
 
 const clients = ref([])
 const loading = ref(true)
-const showAddModal = ref(false)
 const activeSettingsItem = ref(null)
 const resumeIntegrationId = ref(null)
 const initialStep = ref(1)
@@ -358,13 +350,13 @@ onMounted(() => {
   fetchIntegrations()
   
   if (route.query.resume_integration_id) {
-    resumeIntegrationId.value = route.query.resume_integration_id
-    const isAgency = route.query.is_agency === 'true'
-    initialStep.value = 2 // Always show profile selection for consistency
-    showAddModal.value = true
-    
-    // Clean up URL
-    window.history.replaceState({}, '', window.location.pathname)
+    router.push({
+      path: '/integrations/wizard',
+      query: { 
+        resume_integration_id: route.query.resume_integration_id,
+        initial_step: 2 
+      }
+    })
   }
 
   if (route.query.trigger_agency_import === '1') {

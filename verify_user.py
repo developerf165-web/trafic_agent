@@ -16,6 +16,9 @@ def check_user():
 
         print(f"✅ User found: {user.email}")
         print(f"   ID: {user.id}")
+        print(f"   Username: {user.username}")
+        print(f"   First Name: {user.first_name}")
+        print(f"   Last Name: {user.last_name}")
         
         # Check password
         is_valid = verify_password(password, user.password_hash)

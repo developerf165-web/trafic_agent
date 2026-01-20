@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Form
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from core.database import get_db
 from core import models, schemas, security
-from datetime import timedelta
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -11,8 +10,9 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     """
     Register a new user with email, optional username, and password.
     """
-    # Check email uniqueness
-    db_user_email = db.query(models.User).filter(models.User.email == user.email).first()
+    # Check email uniqueness (normalized)
+    email_lower = user.email.lower()
+    db_user_email = db.query(models.User).filter(models.User.email == email_lower).first()
     if db_user_email:
         raise HTTPException(status_code=400, detail="Email already registered")
     
@@ -24,12 +24,11 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     
     hashed_password = security.get_password_hash(user.password)
     new_user = models.User(
-        email=user.email,
+        email=email_lower,
         username=user.username,
         first_name=user.first_name,
         last_name=user.last_name,
-        password_hash=hashed_password,
-        role=models.UserRole.MANAGER
+        password_hash=hashed_password
     )
     db.add(new_user)
     db.commit()
@@ -49,7 +48,8 @@ def login_for_access_token(
     """
     Login using email. Accepts JSON data.
     """
-    user = db.query(models.User).filter(models.User.email == login_data.email).first()
+    email_lower = login_data.email.lower()
+    user = db.query(models.User).filter(models.User.email == email_lower).first()
     
     if not user or not security.verify_password(login_data.password, user.password_hash):
         raise HTTPException(

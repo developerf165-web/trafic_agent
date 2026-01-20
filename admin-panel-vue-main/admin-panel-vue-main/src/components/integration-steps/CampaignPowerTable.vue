@@ -10,8 +10,15 @@
           type="text" 
           v-model="searchQuery"
           placeholder="Поиск по названию или ID..."
-          class="block w-full pl-11 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-[13px] font-bold text-gray-900 placeholder-gray-400 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm"
+          class="block w-full pl-11 pr-10 py-3 bg-white border border-gray-100 rounded-2xl text-[13px] font-bold text-gray-900 placeholder-gray-400 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm"
         >
+        <button 
+          v-if="searchQuery"
+          @click="searchQuery = ''"
+          class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <XMarkIcon class="h-4 w-4" />
+        </button>
       </div>
 
       <div class="flex items-center gap-2 w-full md:w-auto">
@@ -133,8 +140,8 @@
             <tr 
               v-for="campaign in filteredCampaigns" 
             :key="campaign.id"
-            class="border-b border-gray-50 last:border-none group hover:bg-blue-50/30 transition-all cursor-pointer"
-            :class="{ 'bg-blue-50/50': selectedIds.includes(campaign.id) }"
+            class="border-b border-gray-50 last:border-none group hover:bg-blue-50/50 hover:pl-2 transition-all cursor-pointer"
+            :class="{ 'bg-blue-50/50 shadow-inner': selectedIds.includes(campaign.id) }"
             @click="$emit('toggle', campaign.id)"
           >
             <td class="px-4 py-3">
@@ -250,7 +257,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/vue/20/solid'
+import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/vue/20/solid'
 import { CheckIcon, ChartBarIcon } from '@heroicons/vue/24/outline'
 import Skeleton from '../ui/Skeleton.vue'
 

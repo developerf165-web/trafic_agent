@@ -16,7 +16,14 @@ class StatsService:
     @staticmethod
     def aggregate_summary(db: Session, client_ids: List[uuid.UUID], d_start: Optional[datetime.date], d_end: datetime.date, platform: str = "all", campaign_ids: Optional[List[uuid.UUID]] = None):
         if not client_ids:
-            return {"expenses": 0, "impressions": 0, "clicks": 0, "leads": 0, "cpc": 0, "cpa": 0, "trends": None}
+            return {"expenses": 0, "impressions": 0, "clicks": 0, "leads": 0, "cpc": 0, "cpa": 0, "balance": 0, "currency": "RUB", "trends": None}
+
+        # 0. Get Integration settings (primary goal, balance)
+        integrations = db.query(models.Integration).filter(models.Integration.client_id.in_(client_ids)).all()
+        primary_goal_ids = {str(i.id): i.primary_goal_id for i in integrations if i.primary_goal_id}
+        total_balance = sum(float(i.balance or 0) for i in integrations)
+        # Use currency from first integration or RUB
+        main_currency = integrations[0].currency if integrations and integrations[0].currency else "RUB"
 
         def get_data(start, end):
             y_q = db.query(
@@ -50,12 +57,27 @@ class StatsService:
             # print(f"DEBUG: Y_QUERY: {y_q}")
 
             # 3. Yandex Metrica Goals
+            # IMPROVEMENT: Respect primary_goal_id if set for the client
             m_q = db.query(
                 func.sum(models.MetrikaGoals.conversion_count).label("total_conversions")
             ).filter(
-                models.MetrikaGoals.client_id.in_(client_ids),
-                models.MetrikaGoals.goal_id == "all"
+                models.MetrikaGoals.client_id.in_(client_ids)
             )
+
+            # If we have primary goals, use them. Otherwise fallback to "all"
+            if primary_goal_ids:
+                # For dashboard aggregate, if multiple clients are selected, we try to match their specific primary goals
+                # This is a bit complex for a single query, so we'll use a simple approach:
+                # If there's exactly one client_id or they share the same goal_id, filter by it.
+                # Otherwise, stay with "all" or specific IDs.
+                goal_ids = list(set(primary_goal_ids.values()))
+                if len(goal_ids) == 1:
+                    m_q = m_q.filter(models.MetrikaGoals.goal_id == goal_ids[0])
+                else:
+                    # Filter by any of the primary goals
+                    m_q = m_q.filter(models.MetrikaGoals.goal_id.in_(goal_ids))
+            else:
+                m_q = m_q.filter(models.MetrikaGoals.goal_id == "all")
 
             if start:
                 y_q = y_q.filter(models.YandexStats.date >= start)
@@ -133,6 +155,8 @@ class StatsService:
             "cpa": round(cpa, 2),
             "ctr": round(ctr, 2),
             "cr": round(cr, 2),
+            "balance": round(total_balance, 2),
+            "currency": main_currency,
             "revenue": 0.0, # Placeholder for future financial integration
             "profit": -round(curr["costs"], 2),
             "roi": -100.0 if curr["costs"] > 0 else 0.0,

@@ -15,8 +15,15 @@
           type="text" 
           v-model="searchQuery"
           placeholder="Поиск цели..."
-          class="block w-full pl-11 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-[12px] font-bold text-gray-900 placeholder-gray-400 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm"
+          class="block w-full pl-11 pr-10 py-3 bg-white border border-gray-100 rounded-2xl text-[12px] font-bold text-gray-900 placeholder-gray-400 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm"
         >
+        <button 
+          v-if="searchQuery"
+          @click="searchQuery = ''"
+          class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <XMarkIcon class="h-4 w-4" />
+        </button>
       </div>
     </div>
 
@@ -61,8 +68,8 @@
             v-else
             v-for="goal in sortedGoals" 
             :key="goal.id"
-            class="border-b border-gray-50 last:border-none group hover:bg-blue-50/30 transition-all cursor-pointer"
-            :class="{ 'bg-blue-50/50': selectedGoalIds.includes(goal.id) || primaryGoalId === goal.id }"
+            class="border-b border-gray-50 last:border-none group hover:bg-blue-50/50 hover:pl-2 transition-all cursor-pointer"
+            :class="{ 'bg-blue-50/50 shadow-inner': selectedGoalIds.includes(goal.id) || primaryGoalId === goal.id }"
           >
             <!-- Primary Star -->
             <td class="px-5 py-4 text-center" @click.stop="$emit('selectPrimary', goal.id)">
@@ -154,7 +161,8 @@
 import { ref, computed } from 'vue'
 import { 
   MagnifyingGlassIcon,
-  StarIcon
+  StarIcon,
+  XMarkIcon
 } from '@heroicons/vue/20/solid'
 import { 
   CheckIcon,

@@ -254,11 +254,6 @@
     @confirm="handleLogout"
   />
 
-  <!-- Модалка добавления проекта (Единая) -->
-  <UnifiedConnectModal
-    v-model:is-open="showAddProjectModal"
-    @success="handleConnectSuccess"
-  />
 </template>
 
 <script setup>
@@ -281,7 +276,6 @@ import logoFull from '../assets/icons/logo-header.vue'
 import AddProjectArrow   from '../assets/icons/add-project-header.vue'
 import ProfileHeader   from '../assets/icons/profile-header.vue'
 import ConfirmModal from './ConfirmModal.vue'
-import UnifiedConnectModal from './UnifiedConnectModal.vue'
 import { useSidebar } from '../composables/useSidebar'
 import { useAuth } from '../composables/useAuth'
 import { useTheme } from '../composables/useTheme'
@@ -330,7 +324,7 @@ const handleHeaderAction = () => {
     if (isProjectsPage.value) {
         router.push('/projects/create')
     } else {
-        showAddProjectModal.value = true
+        router.push('/integrations/wizard')
     }
 }
 

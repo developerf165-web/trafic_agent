@@ -9,26 +9,30 @@
         >
           <ArrowLeftIcon class="w-5 h-5 text-gray-400 group-hover:text-black" />
         </button>
-        <div>
-          <h1 class="text-2xl font-black text-black tracking-tight uppercase leading-none">Новая интеграция</h1>
-          <div class="flex items-center gap-2 mt-2">
-            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Добавление рекламного канала</p>
-            <template v-if="currentStep > 1 && form.client_name">
-              <span class="text-[8px] text-gray-300">•</span>
-              <span class="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full text-[9px] font-black uppercase tracking-wider border border-blue-100/50">
-                {{ form.client_name }}
-              </span>
-            </template>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Quick Status -->
-      <div v-if="currentStep > 1" class="flex items-center gap-3 px-4 py-2 bg-white rounded-2xl border border-gray-100 shadow-sm animate-fade-in">
-        <PlatformIcon :platform="form.platform" size="sm" />
-        <span class="text-[11px] font-black text-black uppercase tracking-wider">{{ form.platform }}</span>
       </div>
     </div>
+      
+      <!-- Quick Info / Controls -->
+      <div v-if="currentStep > 1" class="flex items-center gap-4 animate-fade-in">
+        <!-- Platform Badge -->
+        <div class="flex items-center gap-3 px-4 py-2 bg-white rounded-2xl border border-gray-100 shadow-sm">
+          <PlatformIcon :platform="form.platform" size="sm" />
+          <span class="text-[11px] font-black text-black uppercase tracking-wider">{{ form.platform }}</span>
+        </div>
+
+        <!-- Global Date Selector for Preview (Steps 3-4) -->
+        <div v-if="currentStep >= 3" class="flex items-center bg-white border border-gray-100 rounded-2xl p-1 shadow-sm">
+          <button 
+            v-for="opt in dateRangeOptions" 
+            :key="opt.value"
+            @click="statsDateRange = opt.value"
+            class="px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tight transition-all"
+            :class="statsDateRange === opt.value ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+      </div>
 
     <!-- Wizard Interface -->
     <div class="bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col min-h-[600px]">
@@ -39,12 +43,12 @@
           <div class="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 z-0"></div>
           <div 
             class="absolute top-1/2 left-0 h-0.5 bg-blue-600 transition-all duration-500 -translate-y-1/2 z-0"
-            :style="{ width: `${((currentStep - 1) / 3) * 100}%` }"
+            :style="{ width: `${((currentStep - 1) / 4) * 100}%` }"
           ></div>
 
           <!-- Steps -->
           <div 
-            v-for="step in 4" 
+            v-for="step in 5" 
             :key="step"
             class="relative z-10 flex flex-col items-center gap-3"
           >
@@ -58,8 +62,8 @@
               {{ step }}
             </div>
             <span 
-              class="absolute -bottom-7 whitespace-nowrap text-[9px] font-black uppercase tracking-widest transition-all duration-300"
-              :class="currentStep >= step ? 'text-blue-600' : 'text-gray-300'"
+              class="absolute -bottom-8 whitespace-nowrap text-[10px] font-black uppercase tracking-widest transition-all duration-300"
+              :class="currentStep >= step ? 'text-blue-600' : 'text-gray-400'"
             >
               {{ stepLabels[step] }}
             </span>
@@ -85,7 +89,7 @@
                 v-else-if="currentStep === 2"
                 :profiles="profiles"
                 :selectedAccountId="form.account_id"
-                :loading="loadingProfiles"
+                :loading="loadingStates.profiles"
                 :platform="form.platform"
                 @selectProfile="selectProfile"
                 @next="nextStep"
@@ -95,7 +99,7 @@
                 v-else-if="currentStep === 3"
                 :campaigns="campaigns"
                 :selectedIds="selectedCampaignIds"
-                :loading="loadingCampaigns"
+                :loading="loadingStates.campaigns"
                 :platform="form.platform"
                 @toggle="toggleCampaignSelection"
                 @bulkSelect="bulkSelectCampaigns"
@@ -103,17 +107,31 @@
                 @next="nextStep"
               />
 
-              <IntegrationStep4 
+              <IntegrationStep4
                 v-else-if="currentStep === 4"
                 :goals="goals"
-                :primaryGoalId="form.primary_goal_id"
                 :selectedGoalIds="selectedGoalIds"
-                :loading="loadingGoals"
+                :primaryGoalId="form.primary_goal_id"
+                :loading="loadingStates.goals"
                 :platform="form.platform"
-                @selectPrimary="selectPrimaryGoal"
                 @toggleSecondary="toggleGoalSelection"
+                @selectPrimary="selectPrimaryGoal"
                 @bulkSelect="bulkSelectGoals"
                 @bulkDeselect="bulkDeselectGoals"
+                @next="nextStep"
+              />
+
+              <IntegrationStep5 
+                v-else-if="currentStep === 5"
+                :projectName="form.client_name"
+                :selectedProfileName="selectedProfile?.name || 'Не выбран'"
+                :selectedProfileLogin="form.account_id"
+                :currency="currentCurrency"
+                :selectedCampaignsList="selectedCampaignsList"
+                :primaryGoalName="primaryGoal?.name"
+                :secondaryGoalsList="secondaryGoalsList"
+                :syncDepth="form.sync_depth"
+                :autoSync="form.auto_sync"
               />
             </div>
           </Transition>
@@ -140,7 +158,20 @@
           </button>
           
           <button 
-            v-if="currentStep < 4"
+            v-if="currentStep === 1 && (form.platform === 'YANDEX_DIRECT' || form.platform === 'VK_ADS')"
+            @click="form.platform === 'YANDEX_DIRECT' ? initYandexAuth() : initVKAuth()"
+            :disabled="loadingAuth || (isCreatingNewProject && !form.client_name)"
+            class="px-10 py-3.5 rounded-2xl text-white font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+            :class="form.platform === 'YANDEX_DIRECT' ? 'bg-[#FF4B21] hover:bg-[#ff3d0d] shadow-[#FF4B21]/20' : 'bg-[#0077FF] hover:bg-[#0066EE] shadow-[#0077FF]/20'"
+          >
+            <div v-if="loadingAuth" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <span v-else class="flex items-center gap-2">
+              ПОДКЛЮЧИТЬ {{ form.platform === 'YANDEX_DIRECT' ? 'ЯНДЕКС ДИРЕКТ' : 'VK ADS' }}
+            </span>
+          </button>
+
+          <button 
+            v-else-if="currentStep < 5"
             @click="nextStep"
             :disabled="isNextDisabled"
             class="px-10 py-3.5 bg-black text-white rounded-2xl hover:bg-blue-600 hover:-translate-y-0.5 active:translate-y-0 font-black text-[10px] uppercase tracking-widest disabled:opacity-50 disabled:translate-y-0 transition-all flex items-center gap-2 shadow-xl shadow-gray-200 hover:shadow-blue-200"
@@ -152,11 +183,11 @@
           <button 
             v-else
             @click="finishConnection"
-            :disabled="isNextDisabled || loadingFinish"
+            :disabled="isNextDisabled || loadingStates.finish"
             class="px-10 py-3.5 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 hover:-translate-y-0.5 active:translate-y-0 font-black text-[10px] uppercase tracking-widest disabled:opacity-50 disabled:translate-y-0 transition-all flex items-center gap-2 shadow-xl shadow-blue-200"
           >
-            <div v-if="loadingFinish" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-            <span>{{ loadingFinish ? 'СОХРАНЕНИЕ...' : 'ПОДКЛЮЧИТЬ' }}</span>
+            <div v-if="loadingStates.finish" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <span>{{ loadingStates.finish ? 'СОХРАНЕНИЕ...' : 'ПОДКЛЮЧИТЬ' }}</span>
           </button>
         </div>
       </div>
@@ -189,6 +220,7 @@ import IntegrationStep1 from '../../components/integration-steps/IntegrationStep
 import IntegrationStep2 from '../../components/integration-steps/IntegrationStep2.vue'
 import IntegrationStep3 from '../../components/integration-steps/IntegrationStep3.vue'
 import IntegrationStep4 from '../../components/integration-steps/IntegrationStep4.vue'
+import IntegrationStep5 from '../../components/integration-steps/IntegrationStep5.vue'
 
 // Composables & API
 import { useProjects } from '../../composables/useProjects'
@@ -222,16 +254,88 @@ const {
   bulkDeselectCampaigns,
   bulkSelectGoals,
   bulkDeselectGoals,
-  selectPrimaryGoal
+  selectPrimaryGoal,
+  statsDateRange
 } = useIntegrationWizard()
 
 const isCreatingNewProject = ref(false)
+const loadingAuth = ref(false)
+
+const initYandexAuth = async () => {
+  loadingAuth.value = true
+  try {
+    const redirectUri = `${window.location.origin}/auth/yandex/callback`
+    if (form.client_name) {
+      localStorage.setItem('yandex_auth_client_name', form.client_name)
+    }
+    const { data } = await api.get(`integrations/yandex/auth-url?redirect_uri=${encodeURIComponent(redirectUri)}`)
+    if (data.url) {
+      window.location.href = data.url
+    }
+  } catch (err) {
+    console.error(err)
+    error.value = 'Не удалось инициализировать авторизацию Яндекс'
+    loadingAuth.value = false
+  }
+}
+
+const initVKAuth = async () => {
+  loadingAuth.value = true
+  try {
+    const redirectUri = `${window.location.origin}/auth/vk/callback`
+    if (form.client_name) {
+      localStorage.setItem('vk_auth_client_name', form.client_name)
+    }
+    const { data } = await api.get(`integrations/vk/auth-url?redirect_uri=${encodeURIComponent(redirectUri)}`)
+    if (data.url) {
+      window.location.href = data.url
+    }
+  } catch (err) {
+    console.error(err)
+    error.value = 'Не удалось инициализировать авторизацию VK'
+    loadingAuth.value = false
+  }
+}
+
+const selectedProfile = computed(() => {
+  return profiles.value.find(p => p.login === form.account_id)
+})
+
+const currentCurrency = computed(() => {
+  const p = profiles.value.find(p => p.login === form.account_id)
+  return p?.currency || 'RUB'
+})
+
+const selectedCampaignsList = computed(() => {
+  return campaigns.value.filter(c => selectedCampaignIds.value.includes(c.id))
+})
+
+const primaryGoal = computed(() => {
+  return goals.value.find(g => g.id === form.primary_goal_id)
+})
+
+const secondaryGoalsList = computed(() => {
+  return goals.value.filter(g => selectedGoalIds.value.includes(g.id) && g.id !== form.primary_goal_id)
+})
+
+const dateRangeOptions = [
+  { label: '7 дней', value: '7' },
+  { label: '30 дней', value: '30' },
+  { label: '90 дней', value: '90' },
+  { label: '1 год', value: '365' }
+]
+
+watch(statsDateRange, () => {
+  if (currentStep.value === 3) fetchCampaigns(lastIntegrationId.value)
+  if (currentStep.value === 4) fetchGoals(lastIntegrationId.value)
+})
 
 const stepLabels = {
   1: 'Платформа и проект',
   2: 'Выбор профиля',
   3: 'Рекламные кампании',
-  4: 'Цели и конверсии'
+  4: 'Цели и конверсии',
+  5: 'Сводка настроек'
 }
 
 // Selectors Presence (Moved inline)
@@ -243,7 +347,7 @@ const isNextDisabled = computed(() => {
   }
   if (currentStep.value === 2) return !form.account_id || loadingStates.profiles
   if (currentStep.value === 3) return (!allFromProfile.value && selectedCampaignIds.value.length === 0) || loadingStates.campaigns
-  if (currentStep.value === 4) return !form.primary_goal_id || loadingStates.finish
+  if (currentStep.value === 4) return !form.primary_goal_id || loadingStates.goals
   return false
 })
 
@@ -273,6 +377,8 @@ const nextStep = async () => {
   } else if (currentStep.value === 3) {
     currentStep.value = 4
     fetchGoals(lastIntegrationId.value)
+  } else if (currentStep.value === 4) {
+    currentStep.value = 5
   }
 }
 
@@ -284,7 +390,6 @@ const prevStep = () => {
 const selectProfile = async (profile) => {
   form.account_id = profile.login
   form.agency_client_login = profile.login
-  isProfileSelectorOpen.value = false
   
   // Patch integration with profile
   try {

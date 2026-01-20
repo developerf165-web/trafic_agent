@@ -14,8 +14,12 @@ const form = reactive({
   client_name: '',
   account_id: null,
   agency_client_login: '',
-  primary_goal_id: null
+  primary_goal_id: null,
+  sync_depth: 90,
+  auto_sync: true
 })
+
+const statsDateRange = ref('30')
 
 const loadingStates = reactive({
   profiles: false,
@@ -47,12 +51,25 @@ export function useIntegrationWizard() {
     form.account_id = null
     form.agency_client_login = ''
     form.primary_goal_id = null
+    form.sync_depth = 90
+    form.auto_sync = true
+    statsDateRange.value = '30'
     campaigns.value = []
     selectedCampaignIds.value = []
     allFromProfile.value = false
     goals.value = []
     selectedGoalIds.value = []
     profiles.value = []
+  }
+
+  const getDateRangeParams = () => {
+    const end = new Date()
+    const start = new Date()
+    start.setDate(end.getDate() - parseInt(statsDateRange.value))
+    return {
+      date_from: start.toISOString().split('T')[0],
+      date_to: end.toISOString().split('T')[0]
+    }
   }
 
   const fetchProfiles = async (integrationId) => {
@@ -70,10 +87,16 @@ export function useIntegrationWizard() {
   const fetchCampaigns = async (integrationId) => {
     loadingStates.campaigns = true
     try {
-      const res = await api.post(`/integrations/${integrationId}/discover-campaigns`)
+      const { date_from, date_to } = getDateRangeParams()
+      const res = await api.post(`/integrations/${integrationId}/discover-campaigns?date_from=${date_from}&date_to=${date_to}`)
       campaigns.value = res.data
-      // Keep existing selection if matching
-      selectedCampaignIds.value = campaigns.value.filter(c => c.is_active).map(c => c.id)
+      // Select active campaigns by default
+      selectedCampaignIds.value = res.data.filter(c => c.state === 'ON' || c.is_active).map(c => c.id)
+      
+      // If none are active (newly discovered), select all
+      if (selectedCampaignIds.value.length === 0) {
+        selectedCampaignIds.value = res.data.map(c => c.id)
+      }
     } catch (err) {
       error.value = "Ошибка при загрузке кампаний"
     } finally {
@@ -84,8 +107,17 @@ export function useIntegrationWizard() {
   const fetchGoals = async (integrationId) => {
     loadingStates.goals = true
     try {
-      const res = await api.get(`/integrations/${integrationId}/goals`)
+      const { date_from, date_to } = getDateRangeParams()
+      const res = await api.get(`/integrations/${integrationId}/goals?account_id=${form.account_id}&date_from=${date_from}&date_to=${date_to}`)
       goals.value = res.data
+
+      // Auto-select primary goal if not set
+      if (res.data.length > 0 && !form.primary_goal_id) {
+        const bestGoal = [...res.data].sort((a, b) => (b.conversion_rate || 0) - (a.conversion_rate || 0))[0]
+        if (bestGoal) {
+          selectPrimaryGoal(bestGoal.id)
+        }
+      }
     } catch (err) {
       error.value = "Ошибка при загрузке целей"
     } finally {
@@ -146,13 +178,30 @@ export function useIntegrationWizard() {
   const finishConnection = async () => {
     loadingStates.finish = true
     try {
-      await api.patch(`/integrations/${lastIntegrationId.value}`, {
-        selected_campaign_ids: [...selectedCampaignIds.value],
-        all_campaigns: allFromProfile.value,
-        primary_goal_id: form.primary_goal_id,
+      // 1. Update campaign statuses in bulk (only selected are active)
+      const campaignUpdates = campaigns.value.map(c => ({
+        id: c.id,
+        is_active: selectedCampaignIds.value.includes(c.id)
+      }))
+      
+      const bulkUpdatePromise = api.put('campaigns/bulk-update', campaignUpdates)
+      
+      const integrationPromise = api.patch(`/integrations/${lastIntegrationId.value}`, {
         selected_goals: [...selectedGoalIds.value],
-        is_active: true
+        primary_goal_id: form.primary_goal_id,
+        auto_sync: form.auto_sync,
+        sync_interval: 1440 // Daily
       })
+      
+      await Promise.all([bulkUpdatePromise, integrationPromise])
+      
+      // 3. Trigger initial sync automatically (sync_depth days)
+      try {
+        await api.post(`/integrations/${lastIntegrationId.value}/sync`, { days: form.sync_depth })
+      } catch (syncErr) {
+        console.warn('Initial sync failed, but integration was saved:', syncErr)
+      }
+
       toaster.success("Интеграция успешно настроена!")
       resetStore()
       if (router) router.push('/settings')
@@ -177,6 +226,7 @@ export function useIntegrationWizard() {
     selectedGoalIds,
     allFromGoalsFromProfile,
     profiles,
+    statsDateRange,
 
     // Actions
     resetStore,

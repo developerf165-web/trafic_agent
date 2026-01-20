@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 import os
 import json
 from core.logging_utils import log_event
+from .services import IntegrationService
 
 # Yandex Direct Credentials
 YANDEX_CLIENT_ID = os.getenv("YANDEX_CLIENT_ID", "e2a052c8cac54caeb9b1b05a593be932")
@@ -496,61 +497,14 @@ async def get_integration_profiles(
     log_event("get_integration_profiles", f"User {current_user.id} requesting profiles for integration {integration_id}")
 
     access_token = security.decrypt_token(integration.access_token)
-    
-    if integration.platform == models.IntegrationPlatform.YANDEX_DIRECT:
-        log_event("yandex", f"fetching profiles for integration {integration_id}")
-        try:
-            profiles = []
-            seen_logins = set()
-
-            # 1. Always include the personal account itself
-            personal_login = integration.account_id
-            if personal_login and personal_login.lower() != "unknown":
-                profiles.append({"login": personal_login, "name": f"Личный аккаунт ({personal_login})"})
-                seen_logins.add(personal_login.lower())
-
-            # 2. Try to get agency clients
-            agency_clients = await get_agency_clients(access_token)
-            for ac in agency_clients:
-                login = ac.get("login")
-                if login and login.lower() not in seen_logins:
-                    profiles.append(ac)
-                    seen_logins.add(login.lower())
-
-            # 3. Try to get managed logins (shared access / "Editor" role)
-            try:
-                direct_api = YandexDirectAPI(access_token)
-                clients_info = await direct_api.get_clients()
-                for c_info in clients_info:
-                    managed = c_info.get("ManagedLogins", [])
-                    for m_login in managed:
-                        if m_login and m_login.lower() not in seen_logins:
-                            profiles.append({
-                                "login": m_login,
-                                "name": f"Доступный аккаунт ({m_login})"
-                            })
-                            seen_logins.add(m_login.lower())
-            except Exception as e:
-                logger.error(f"Error fetching managed logins: {e}")
-
-            # Fallback if nothing found
-            if not profiles:
-                display_id = integration.account_id or "Unknown"
-                profiles = [{"login": display_id, "name": f"Личный аккаунт ({display_id})"}]
-            
-            log_event("yandex", f"received {len(profiles)} profiles from yandex")
-            return profiles
-        except Exception as e:
-            log_event("yandex", f"error fetching profiles: {str(e)}", level="error")
-            return [{"login": integration.account_id, "name": f"Аккаунт ({integration.account_id})"}]
-    
-    log_event("get_integration_profiles", f"No specific profile fetching logic for platform {integration.platform}", level="info")
-    return [] # Return empty list for other platforms or if no specific logic
+    return await IntegrationService.get_profiles(integration, access_token)
 
 @router.get("/{integration_id}/goals")
 async def get_integration_goals(
     integration_id: uuid.UUID,
     account_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     current_user: models.User = Depends(security.get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -599,14 +553,16 @@ async def get_integration_goals(
             counter_name = counter.get('name', 'Unknown')
             try:
                 # Use metrica_api which might be the fallback one
-                goals = await metrica_api.get_counter_goals(counter_id)
+                goals = await metrica_api.get_counter_goals(counter_id, date_from=date_from, date_to=date_to)
                 log_event("yandex", f"counter {counter_id} ({counter_name}) has {len(goals)} goals")
                 for goal in goals:
                     all_goals.append({
-                        "id": str(goal['id']),
-                        "name": f"{goal['name']} ({counter_name})",
-                        "type": goal.get('type', 'Unknown'),
-                        "counter_id": counter_id
+                        "id": goal.id,
+                        "name": f"{goal.name} ({counter_name})",
+                        "type": goal.type,
+                        "counter_id": counter_id,
+                        "reaches": goal.reaches,
+                        "conversion_rate": goal.conversion_rate
                     })
             except Exception as goals_err:
                 logger.error(f"Failed to fetch goals for counter {counter_id}: {goals_err}")
@@ -636,9 +592,6 @@ async def update_integration(
         
     for key, value in integration_in.items():
         if hasattr(integration, key):
-            # Special handling for JSON fields if they come as lists/dicts
-            if key == 'selected_goals' and (isinstance(value, list) or isinstance(value, dict)):
-                value = json.dumps(value)
             setattr(integration, key, value)
             
     log_event("backend", f"updated integration {integration_id}", integration_in)
@@ -649,6 +602,8 @@ async def update_integration(
 @router.post("/{integration_id}/discover-campaigns")
 async def discover_campaigns(
     integration_id: uuid.UUID,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     current_user: models.User = Depends(security.get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -665,39 +620,13 @@ async def discover_campaigns(
         
     log_event("backend", f"discovering campaigns for integration {integration_id}")
     access_token = security.decrypt_token(integration.access_token)
-    discovered_campaigns = []
     
-    if integration.platform == models.IntegrationPlatform.YANDEX_DIRECT:
-        api = YandexDirectAPI(access_token, integration.agency_client_login)
-        discovered_campaigns = await api.get_campaigns()
-        log_event("yandex", f"discovered {len(discovered_campaigns)} campaigns")
-    elif integration.platform == models.IntegrationPlatform.VK_ADS:
-        api = VKAdsAPI(access_token, integration.account_id)
-        discovered_campaigns = await api.get_campaigns()
-        log_event("vk", f"discovered {len(discovered_campaigns)} campaigns")
-        
-    # Save to DB
-    for dc in discovered_campaigns:
-        campaign = db.query(models.Campaign).filter_by(
-            integration_id=integration.id,
-            external_id=str(dc["id"])
-        ).first()
-        
-        if not campaign:
-            campaign = models.Campaign(
-                integration_id=integration.id,
-                external_id=str(dc["id"]),
-                name=dc["name"],
-                is_active=False # Discovery creates them as inactive by default
-            )
-            db.add(campaign)
-        else:
-            campaign.name = dc["name"]
-            
+    discovered_campaigns, platform_name = await IntegrationService.discover_campaigns(db, integration, access_token, date_from=date_from, date_to=date_to)
+    log_event(platform_name, f"discovered {len(discovered_campaigns)} campaigns")
     db.commit()
-    
-    # Return all campaigns for this integration
-    return db.query(models.Campaign).filter_by(integration_id=integration.id).all()
+            
+    # Return discovered campaigns with their rich metadata (stats)
+    return discovered_campaigns
 
 @router.get("/{integration_id}/test-connection")
 async def test_integration_connection(
@@ -717,41 +646,19 @@ async def test_integration_connection(
         raise HTTPException(status_code=404, detail="Integration not found")
         
     access_token = security.decrypt_token(integration.access_token)
-    status_info = {"status": "success", "platform": integration.platform, "details": []}
-    
     try:
-        if integration.platform == models.IntegrationPlatform.YANDEX_DIRECT:
-            # Test Direct API
-            direct_api = YandexDirectAPI(access_token, integration.agency_client_login)
+        status_info = await IntegrationService.test_connection(integration, access_token)
+        
+        # Additional VK Ads testing if platform matches
+        if integration.platform == models.IntegrationPlatform.VK_ADS:
+            from automation.vk_ads import VKAdsAPI
+            vk_api = VKAdsAPI(access_token, integration.account_id)
             try:
-                # Simple check: fetch campaign IDs only
-                await direct_api.get_campaigns()
-                status_info["details"].append("Yandex Direct: OK")
+                await vk_api.get_campaigns()
+                status_info["details"].append("VK Ads: OK")
             except Exception as e:
                 status_info["status"] = "failed"
-                status_info["details"].append(f"Yandex Direct: {str(e)}")
-            
-            # Test Metrica API
-            metrica_api = YandexMetricaAPI(access_token)
-            try:
-                await metrica_api.get_counters()
-                status_info["details"].append("Yandex Metrica: OK")
-            except Exception as e:
-                # Metrica failure might not mean total failure if Direct works
-                status_info["details"].append(f"Yandex Metrica: {str(e)}")
-                if status_info["status"] == "success": # If Direct worked, we might still mark as partial success or warning
-                     status_info["status"] = "warning"
-
-        elif integration.platform == models.IntegrationPlatform.VK_ADS:
-             # Test VK API
-             from automation.vk_ads import VKAdsAPI
-             vk_api = VKAdsAPI(access_token, integration.account_id)
-             try:
-                 await vk_api.get_campaigns()
-                 status_info["details"].append("VK Ads: OK")
-             except Exception as e:
-                 status_info["status"] = "failed"
-                 status_info["details"].append(f"VK Ads: {str(e)}")
+                status_info["details"].append(f"VK Ads: {str(e)}")
 
         # Update integration status in DB
         integration.last_sync_at = datetime.utcnow()

@@ -67,12 +67,6 @@
       <PromotionEfficiency :summary="summary" :campaigns="campaigns" />
     </div>
 
-    <!-- Connect Modal -->
-    <UnifiedConnectModal
-      ref="connectModalRef"
-      v-model:is-open="isConnectModalOpen"
-      @success="fetchStats"
-    />
   </div>
 </div>
 </template>
@@ -89,7 +83,6 @@ import PromotionEfficiency from './components/PromotionEfficiency.vue'
 import KPIOverview from './components/KPIOverview.vue'
 import StatsFilters from './components/StatsFilters.vue'
 import StatsHeader from './components/StatsHeader.vue'
-import UnifiedConnectModal from '../../components/UnifiedConnectModal.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
 
 // Logic
@@ -135,8 +128,6 @@ watch(() => filters.client_id, (newId) => {
 // --- State & UI Logic ---
 
 const selectedMetric = ref(null)
-const isConnectModalOpen = ref(false)
-const connectModalRef = ref(null)
 
 const toggleMetric = (metric) => {
   selectedMetric.value = selectedMetric.value === metric ? null : metric
@@ -207,15 +198,13 @@ const handleExport = async () => {
 // React to post-callback redirect (integrations)
 watch(() => route.query.new_integration_id, (id) => {
   if (id) {
-    isConnectModalOpen.value = true
-    setTimeout(() => {
-      if (connectModalRef.value) {
-        connectModalRef.value.currentStep = 2
-        connectModalRef.value.lastIntegrationId = id
-        connectModalRef.value.fetchCampaigns(id)
+    router.push({
+      path: '/integrations/wizard',
+      query: { 
+        resume_integration_id: id,
+        initial_step: 2 
       }
-    }, 100)
-    window.history.replaceState({}, '', window.location.pathname)
+    })
   }
 }, { immediate: true })
 
