@@ -67,8 +67,65 @@ const routes = [
   },
   {
     path: '/settings',
-    name: 'Settings',
-    component: () => import('../views/Settings/Settings.vue')
+    component: () => import('../views/Settings/Settings.vue'),
+    children: [
+      {
+        path: '',
+        redirect: { name: 'SettingsIntegrations' }
+      },
+      {
+        path: 'integrations',
+        name: 'SettingsIntegrations',
+        component: () => import('../views/Settings/components/IntegrationsTab.vue')
+      },
+      {
+        path: 'integrations/wizard',
+        name: 'SettingsAddIntegration',
+        component: () => import('../views/Integrations/AddIntegrationPage.vue')
+      },
+      {
+        path: 'appearance',
+        name: 'SettingsAppearance',
+        component: () => import('../views/Settings/components/PlaceholderTab.vue'),
+        props: { title: 'Внешний вид' }
+      },
+      {
+        path: 'privacy',
+        name: 'SettingsPrivacy',
+        component: () => import('../views/Settings/components/PlaceholderTab.vue'),
+        props: { title: 'Конфиденциальность' }
+      },
+      {
+        path: 'payment',
+        name: 'SettingsPayment',
+        component: () => import('../views/Settings/components/PlaceholderTab.vue'),
+        props: { title: 'Оплата' }
+      },
+      {
+        path: 'notifications',
+        name: 'SettingsNotifications',
+        component: () => import('../views/Settings/components/PlaceholderTab.vue'),
+        props: { title: 'Уведомления' }
+      },
+      {
+        path: 'language',
+        name: 'SettingsLanguage',
+        component: () => import('../views/Settings/components/PlaceholderTab.vue'),
+        props: { title: 'Язык' }
+      },
+      {
+        path: 'hotkeys',
+        name: 'SettingsHotkeys',
+        component: () => import('../views/Settings/components/PlaceholderTab.vue'),
+        props: { title: 'Горячие клавиши' }
+      },
+      {
+        path: 'additional',
+        name: 'SettingsAdditional',
+        component: () => import('../views/Settings/components/PlaceholderTab.vue'),
+        props: { title: 'Дополнительно' }
+      }
+    ]
   },
   {
     path: '/help',
@@ -89,11 +146,6 @@ const routes = [
     path: '/profile',
     name: 'Profile',
     component: () => import('../views/Profile/Profile.vue')
-  },
-  {
-    path: '/integrations/wizard',
-    name: 'AddIntegration',
-    component: () => import('../views/Integrations/AddIntegrationPage.vue')
   },
   {
     path: '/projects/create',

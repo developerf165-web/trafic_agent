@@ -1,10 +1,10 @@
 <template>
-  <div class="max-w-6xl mx-auto p-4 md:p-8">
+  <div class="p-4 md:p-6">
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
       <div class="flex items-center gap-4">
         <button 
-          @click="$router.push('/settings')" 
+          @click="$router.push('/settings/integrations')" 
           class="p-2.5 hover:bg-white rounded-2xl transition-all border border-transparent hover:border-gray-100 shadow-sm group"
         >
           <ArrowLeftIcon class="w-5 h-5 text-gray-400 group-hover:text-black" />
@@ -162,7 +162,7 @@
 
         <div class="flex items-center gap-4">
           <button 
-            @click="$router.push('/settings')"
+            @click="$router.push('/settings/integrations')"
             class="px-6 py-3.5 text-gray-400 hover:text-black text-[10px] font-black uppercase tracking-widest transition-colors"
           >
             Отмена
@@ -203,7 +203,7 @@
 
           <button 
             v-else-if="currentStep === 6"
-            @click="$router.push('/settings')"
+            @click="$router.push('/settings/integrations')"
             class="px-10 py-3.5 bg-black text-white rounded-2xl hover:bg-gray-900 hover:-translate-y-0.5 active:translate-y-0 font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-xl"
           >
             В НАСТРОЙКИ

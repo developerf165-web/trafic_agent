@@ -172,24 +172,23 @@ class YandexMetricaAPI:
                 if self.client_login:
                     stats_params["ulogin"] = self.client_login
                 
-                try:
-                    stats_data = await self._request("GET", stats_url, params=stats_params)
-                    if "data" in stats_data:
-                        stats_json = stats_data
-                        stats_map = {}
-                        for row in stats_json.get("data", []):
-                            # Dim: ym:s:goalDimension (id)
-                            goal_id = str(row["dimensions"][0]["id"])
-                            stats_map[goal_id] = {
-                                "reaches": int(row["metrics"][0]),
-                                "cr": float(row["metrics"][1])
-                            }
-                        
-                        # Merge stats into results
-                        for goal in results:
-                            if goal.id in stats_map:
-                                goal.reaches = stats_map[goal.id]["reaches"]
-                                goal.conversion_rate = stats_map[goal.id]["cr"]
+                stats_data = await self._request("GET", stats_url, params=stats_params)
+                if "data" in stats_data:
+                    stats_json = stats_data
+                    stats_map = {}
+                    for row in stats_json.get("data", []):
+                        # Dim: ym:s:goalDimension (id)
+                        goal_id = str(row["dimensions"][0]["id"])
+                        stats_map[goal_id] = {
+                            "reaches": int(row["metrics"][0]),
+                            "cr": float(row["metrics"][1])
+                        }
+                    
+                    # Merge stats into results
+                    for goal in results:
+                        if goal.id in stats_map:
+                            goal.reaches = stats_map[goal.id]["reaches"]
+                            goal.conversion_rate = stats_map[goal.id]["cr"]
             except Exception as e:
                 logger.warning(f"Failed to fetch Metrica goal stats: {e}")
 

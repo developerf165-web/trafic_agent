@@ -19,7 +19,7 @@
         <p class="text-[13px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Ничего не найдено</p>
         <p class="text-[11px] text-gray-400 mb-6">У вас пока нет активных интеграций для ваших проектов</p>
         <button 
-          @click="$router.push('/integrations/wizard')" 
+          @click="$router.push('/settings/integrations/wizard')" 
           class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-500/20"
         >
           Подключить интеграцию
@@ -338,7 +338,7 @@ const handleSync = async (id) => {
 
 const openEditWizard = (item) => {
   router.push({
-    path: '/integrations/wizard',
+    path: '/settings/integrations/wizard',
     query: { 
       resume_integration_id: item.id,
       initial_step: 2 
@@ -351,7 +351,7 @@ onMounted(() => {
   
   if (route.query.resume_integration_id) {
     router.push({
-      path: '/integrations/wizard',
+      path: '/settings/integrations/wizard',
       query: { 
         resume_integration_id: route.query.resume_integration_id,
         initial_step: 2 

@@ -19,7 +19,7 @@
         </div>
 
         <div class="relative z-10 flex items-center gap-8">
-          <div class="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center shadow-2xl overflow-hidden p-0">
+          <div class="w-20 h-20 flex items-center justify-center overflow-hidden p-0">
              <svg width="80" height="80" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                <path d="M0 20a20 20 0 1 1 40 0 20 20 0 1 1-40 0z" fill="#1A4A7F"/>
                <path fill-rule="evenodd" clip-rule="evenodd" d="M16.73 39.73a19.95 19.95 0 0 1-10.64-5.35l18.02-16.54-10.3 2.5a5.29 5.29 0 0 1-6.42-3.96 5.45 5.45 0 0 1 4.01-6.5l21.44-5.21a20 20 0 0 1-4.83 33.66c-.06-.71.01-1.45.26-2.17l3.4-10.14-14.94 13.71z" fill="url(#banner_svg_grad)"/>
