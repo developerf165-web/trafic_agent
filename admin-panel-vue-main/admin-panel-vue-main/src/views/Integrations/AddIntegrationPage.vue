@@ -9,6 +9,9 @@
         >
           <ArrowLeftIcon class="w-5 h-5 text-gray-400 group-hover:text-black" />
         </button>
+        <h1 class="text-2xl font-black text-gray-900 tracking-tight">
+          Добавление новой интеграции {{ form.platform === 'YANDEX_DIRECT' ? 'Яндекс Директ' : 'VK Ads' }}
+        </h1>
       </div>
     </div>
       
@@ -34,10 +37,10 @@
         </div>
       </div>
 
-    <!-- Wizard Interface -->
-    <div class="bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col min-h-[600px]">
+    <!-- Wizard Interface (Seamless) -->
+    <div class="flex flex-col min-h-[600px]">
       <!-- Stepper Header -->
-      <div class="px-8 py-10 border-b border-gray-50 bg-gray-50/30">
+      <div class="px-8 py-10 mb-8">
         <div class="max-w-2xl mx-auto flex items-center justify-between relative">
           <!-- Background Line -->
           <div class="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 z-0"></div>
@@ -72,7 +75,7 @@
       </div>
 
       <!-- Step Content Area -->
-      <div class="flex-grow p-8 md:p-12">
+      <div class="flex-grow">
         <div class="max-w-3xl mx-auto">
           <Transition name="fade-slide" mode="out-in">
             <div :key="currentStep">
@@ -139,7 +142,7 @@
       </div>
 
       <!-- Action Footer -->
-      <div class="px-8 py-6 border-t border-gray-50 flex items-center justify-between bg-white sticky bottom-0 z-20">
+      <div class="py-12 flex items-center justify-between sticky bottom-0 z-20">
         <button 
           @click="prevStep"
           :disabled="currentStep === 1"
