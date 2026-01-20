@@ -20,7 +20,7 @@ docker compose up -d --build backend db
 
 # 3. Run Database Migrations
 echo "🐘 Running database migrations..."
-docker compose exec -T backend alembic upgrade head
+docker compose run --rm backend alembic upgrade head
 
 # 4. Build Frontend
 echo "📦 Building Frontend..."
