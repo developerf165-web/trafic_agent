@@ -3,8 +3,8 @@ from sqlalchemy import inspect
 
 def check_columns():
     inspector = inspect(engine)
-    columns = inspector.get_columns('users')
-    print("Columns in 'users' table:")
+    print("Checking 'integrations' table:")
+    columns = inspector.get_columns('integrations')
     for column in columns:
         print(f"- {column['name']} ({column['type']})")
 
