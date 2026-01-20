@@ -69,13 +69,29 @@ onMounted(async () => {
     if (isAgency || isAgencyImport) {
       // Store token temporarily for the AgencyImportModal to use
       localStorage.setItem('temp_agency_token', response.data.access_token)
-      toaster.success('Аккаунт агентства успешно подключен!')
-      // Redirect to settings and trigger the import modal
-      router.push('/settings?trigger_agency_import=1')
+      
+      if (window.opener) {
+        window.opener.postMessage({ 
+          type: 'oauth-success', 
+          data: { ...response.data, is_agency: true, trigger_agency_import: true } 
+        }, window.location.origin)
+        window.close()
+      } else {
+        toaster.success('Аккаунт агентства успешно подключен!')
+        router.push('/settings?trigger_agency_import=1')
+      }
     } else {
       // Standard success flow
-      toaster.success('Яндекс Директ успешно подключен!')
-      router.push(`/settings?resume_integration_id=${response.data.integration_id}&platform=YANDEX_DIRECT&is_agency=${isAgency}`) 
+      if (window.opener) {
+        window.opener.postMessage({ 
+          type: 'oauth-success', 
+          data: response.data 
+        }, window.location.origin)
+        window.close()
+      } else {
+        toaster.success('Яндекс Директ успешно подключен!')
+        router.push(`/settings?resume_integration_id=${response.data.integration_id}&platform=YANDEX_DIRECT&is_agency=${isAgency}`) 
+      }
     }
   } catch (err) {
     console.error(err)

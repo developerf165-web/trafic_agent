@@ -11,96 +11,80 @@
       </p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Left Column: Basics & Campaigns -->
-      <div class="space-y-6">
-        <!-- Project & Platform -->
-        <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 bg-blue-50 rounded-2xl flex items-center justify-center">
-              <BuildingOfficeIcon class="w-5 h-5 text-blue-600" />
+    <div class="max-w-2xl mx-auto">
+      <div class="bg-white border border-gray-100 rounded-[3rem] overflow-hidden shadow-[0_30px_80px_-15px_rgba(0,0,0,0.08)]">
+        <!-- Card Header -->
+        <div class="bg-gradient-to-r from-gray-900 to-blue-900 p-10 text-white relative overflow-hidden">
+          <div class="absolute right-0 top-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
+          <div class="relative z-10 flex items-center justify-between">
+            <div class="space-y-2">
+              <p class="text-[10px] font-black text-blue-300 uppercase tracking-[0.3em]">КОНФИГУРАЦИЯ ЗАВЕРШЕНА</p>
+              <h3 class="text-3xl font-black tracking-tight">{{ projectName }}</h3>
             </div>
-            <div>
-              <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Проект и платформа</p>
-              <h3 class="text-[14px] font-black text-gray-900">{{ projectName || 'Не выбран' }}</h3>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-orange-100">Яндекс Директ</span>
-            <span class="text-[11px] font-bold text-gray-400 italic">Активный проект</span>
-          </div>
-        </div>
-
-        <!-- Selected Campaigns -->
-        <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center">
-              <MegaphoneIcon class="w-5 h-5 text-indigo-600" />
-            </div>
-            <div>
-              <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Кампании</p>
-              <h3 class="text-[14px] font-black text-gray-900">Выбрано: {{ selectedCampaignsCount }}</h3>
-            </div>
-          </div>
-          <div class="max-h-40 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-            <div 
-              v-for="campaign in selectedCampaignsList" 
-              :key="campaign.id"
-              class="flex items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100/50"
-            >
-              <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-              <span class="text-[11px] font-bold text-gray-700 truncate">{{ campaign.name }}</span>
+            <div class="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
+               <PlatformIcon :platform="platform || 'YANDEX_DIRECT'" size="lg" class="brightness-0 invert opacity-80" />
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Right Column: Profile & Goals -->
-      <div class="space-y-6">
-        <!-- Selected Profile -->
-        <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 bg-emerald-50 rounded-2xl flex items-center justify-center">
-              <UserCircleIcon class="w-5 h-5 text-emerald-600" />
+        <div class="p-10 space-y-10">
+          <!-- Main Details -->
+          <div class="grid grid-cols-2 gap-12">
+            <div class="space-y-2">
+               <p class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Аккаунт</p>
+               <div class="flex items-center gap-3">
+                 <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                   <UserCircleIcon class="w-5 h-5 text-blue-600" />
+                 </div>
+                 <div class="flex flex-col">
+                   <span class="text-[14px] font-black text-gray-800 leading-none">{{ selectedProfileName }}</span>
+                   <span class="text-[11px] font-bold text-gray-400 mt-1">{{ selectedProfileLogin }}</span>
+                 </div>
+               </div>
             </div>
-            <div>
-              <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Профиль / Аккаунт</p>
-              <h3 class="text-[14px] font-black text-gray-900">{{ selectedProfileName }}</h3>
+            <div class="space-y-2">
+               <p class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Валюта</p>
+               <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
+                    <span class="text-[12px] font-black text-emerald-600">$</span>
+                  </div>
+                  <span class="text-[14px] font-black text-gray-800 uppercase">{{ currency || 'RUB' }}</span>
+               </div>
             </div>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-[11px] font-bold text-gray-400">{{ selectedProfileLogin }}</span>
-            <span v-if="currency" class="px-2 py-0.5 bg-green-50 text-green-700 rounded-md text-[9px] font-black border border-green-100">{{ currency }}</span>
-          </div>
-        </div>
 
-        <!-- Main & Secondary Goals -->
-        <div class="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 bg-orange-50 rounded-2xl flex items-center justify-center">
-              <PresentationChartLineIcon class="w-5 h-5 text-orange-600" />
-            </div>
-            <div>
-              <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Настройка целей</p>
-              <h3 class="text-[14px] font-black text-gray-900">Основная: {{ primaryGoalName || 'Не выбрана' }}</h3>
-            </div>
+          <!-- Campaigns & Goals -->
+          <div class="space-y-6">
+             <div class="flex items-center justify-between py-4 border-y border-gray-50">
+                <div class="flex items-center gap-3">
+                   <MegaphoneIcon class="w-5 h-5 text-gray-400" />
+                   <span class="text-[13px] font-black text-gray-700 uppercase tracking-tight">Выбрано кампаний</span>
+                </div>
+                <span class="px-3 py-1 bg-black text-white rounded-lg text-[12px] font-black">{{ selectedCampaignsCount }}</span>
+             </div>
+
+             <div class="space-y-4">
+                <div class="flex items-center gap-3">
+                   <StarIcon class="w-5 h-5 text-yellow-400" />
+                   <span class="text-[13px] font-black text-gray-400 uppercase tracking-tight">Основная цель</span>
+                </div>
+                <div class="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-between">
+                   <span class="text-[15px] font-black text-blue-900 tracking-tight">{{ primaryGoalName || 'Не выбрана' }}</span>
+                   <div class="px-3 py-1 bg-blue-600 text-white rounded-md text-[9px] font-black uppercase">Primary</div>
+                </div>
+             </div>
           </div>
-          <div class="space-y-3">
-             <div v-if="primaryGoalName" class="flex items-center gap-2 p-2.5 bg-orange-50/50 rounded-xl border border-orange-100">
-              <StarIcon class="w-4 h-4 text-orange-400 fill-orange-400" />
-              <span class="text-[11px] font-black text-orange-900 truncate">{{ primaryGoalName }}</span>
-            </div>
-            <p v-if="secondaryGoalsList.length > 0" class="text-[9px] font-black text-gray-400 uppercase tracking-widest pl-1 mt-4">Дополнительные цели ({{ secondaryGoalsList.length }}):</p>
-            <div class="max-h-24 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-              <div 
-                v-for="goal in secondaryGoalsList" 
-                :key="goal.id"
-                class="flex items-center gap-2 p-2 bg-blue-50/30 rounded-xl border border-blue-50"
-              >
-                <CheckIcon class="w-3 h-3 text-blue-500" stroke-width="3" />
-                <span class="text-[11px] font-bold text-gray-600 truncate">{{ goal.name }}</span>
-              </div>
-            </div>
+
+          <!-- Extra Settings -->
+          <div class="flex items-center justify-between gap-4 p-6 bg-gray-50 rounded-[2rem]">
+             <div class="flex items-center gap-3">
+                <ArrowPathRoundedSquareIcon class="w-5 h-5 text-gray-400" />
+                <span class="text-[12px] font-black text-gray-600 uppercase tracking-tight">Синхронизация: {{ syncDepth }}дн / Авто</span>
+             </div>
+             <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span class="text-[10px] font-black text-green-600 uppercase tracking-widest">Готов к деплою</span>
+             </div>
           </div>
         </div>
       </div>
@@ -162,6 +146,7 @@ import { CheckIcon } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
   projectName: String,
+  platform: String,
   selectedProfileName: String,
   selectedProfileLogin: String,
   currency: String,

@@ -9,9 +9,26 @@
       <!-- Platform Info & Health (Enriched) -->
       <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group mb-10">
         <div class="absolute -right-20 -bottom-20 w-80 h-80 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-1000"></div>
+        
+        <!-- Decorative Logo Watermark -->
+        <div class="absolute right-10 top-1/2 -translate-y-1/2 opacity-10 pointer-events-none transform rotate-12 scale-150">
+          <svg width="120" height="120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 60a60 60 0 1 1 120 0 60 60 0 1 1-120 0z" fill="white"/>
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M50.19 119.19a59.85 59.85 0 0 1-31.92-16.05l54.06-49.62-30.9 7.5a15.87 15.87 0 0 1-19.26-11.88 16.35 16.35 0 0 1 12.03-19.5l64.32-15.63a60 60 0 0 1-14.49 100.98c-.18-2.13.03-4.35.78-6.51l10.2-30.42-44.82 41.13z" fill="white"/>
+          </svg>
+        </div>
+
         <div class="relative z-10 flex items-center gap-8">
-          <div class="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-[2rem] flex items-center justify-center border border-white/30 shadow-2xl">
-             <PlatformIcon :platform="modelValue.platform" class="w-12 h-12 brightness-0 invert" />
+          <div class="w-20 h-20 bg-white rounded-[2rem] flex items-center justify-center shadow-2xl overflow-hidden p-0">
+             <svg width="80" height="80" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+               <path d="M0 20a20 20 0 1 1 40 0 20 20 0 1 1-40 0z" fill="#1A4A7F"/>
+               <path fill-rule="evenodd" clip-rule="evenodd" d="M16.73 39.73a19.95 19.95 0 0 1-10.64-5.35l18.02-16.54-10.3 2.5a5.29 5.29 0 0 1-6.42-3.96 5.45 5.45 0 0 1 4.01-6.5l21.44-5.21a20 20 0 0 1-4.83 33.66c-.06-.71.01-1.45.26-2.17l3.4-10.14-14.94 13.71z" fill="url(#banner_svg_grad)"/>
+               <defs>
+                 <linearGradient id="banner_svg_grad" x1="49.06" y1="2.53" x2="-19.41" y2="65.36" gradientUnits="userSpaceOnUse">
+                   <stop stop-color="#FFB800"/><stop offset="1" stop-color="#FFF11D"/>
+                 </linearGradient>
+               </defs>
+             </svg>
           </div>
           <div class="flex-grow">
             <h2 class="text-2xl font-black mb-2 tracking-tight uppercase">Настройка {{ PLATFORMS[modelValue.platform]?.label }}</h2>
@@ -32,13 +49,21 @@
             @click="!config.comingSoon && updateForm({ platform: key })"
             class="relative group p-3 bg-white border-2 rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden"
             :class="[
-              modelValue.platform === key ? 'border-blue-600 ring-4 ring-blue-50 shadow-md' : 'border-gray-50 opacity-60 hover:opacity-100 hover:border-blue-200',
+              modelValue.platform === key 
+                ? 'border-blue-600 ring-4 ring-blue-50 shadow-[0_20px_40px_-10px_rgba(37,99,235,0.25)] scale-[1.02] z-10' 
+                : 'border-gray-50 opacity-60 hover:opacity-100 hover:border-blue-200 hover:scale-[1.01]',
               config.comingSoon ? 'opacity-30 cursor-not-allowed filter grayscale pointer-events-none' : ''
             ]"
           >
-            <div class="flex items-center gap-3">
+            <!-- Glow Effect Layer -->
+            <div 
+              v-if="modelValue.platform === key"
+              class="absolute inset-0 bg-blue-600/5 animate-pulse-slow pointer-events-none"
+            ></div>
+
+            <div class="flex items-center gap-3 relative z-10">
               <div 
-                class="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black transition-all group-hover:scale-105"
+                class="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black transition-all group-hover:scale-110"
                 :class="config.className"
               >
                 {{ config.initials }}
@@ -96,9 +121,10 @@
                 v-click-outside="() => isDropdownOpen = false"
               >
                 <div class="max-h-[350px] overflow-y-auto py-3 custom-scrollbar">
+                  <!-- Creating New Project (Always at top) -->
                   <div 
                     @click="handleCreateNewAction"
-                    class="px-5 py-4 mx-3 mb-2 rounded-2xl flex items-center gap-4 cursor-pointer transition-all hover:bg-blue-600 group border border-transparent"
+                    class="px-5 py-4 mx-3 mb-2 rounded-2xl flex items-center gap-4 cursor-pointer transition-all hover:bg-blue-600 group border border-transparent shadow-sm"
                   >
                     <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-white/20 transition-colors shadow-sm">
                       <PlusIcon class="w-5 h-5 text-blue-600 group-hover:text-white" />
@@ -107,21 +133,49 @@
                       <span class="block text-[13px] font-black text-blue-600 group-hover:text-white uppercase tracking-tight">СОЗДАТЬ НОВЫЙ ПРОЕКТ</span>
                     </div>
                   </div>
+
                   <div class="h-px bg-gray-100/50 mx-5 my-2"></div>
-                  <div 
-                    v-for="project in filteredProjects" 
-                    :key="project.id"
-                    @click="selectProject(project)"
-                    class="px-5 py-4 mx-3 rounded-2xl flex items-center justify-between cursor-pointer transition-all hover:bg-gray-50 group mb-1 last:mb-0"
-                    :class="{ 'bg-blue-50 text-blue-600': modelValue.client_id === project.id }"
-                  >
-                    <div class="flex items-center gap-4">
-                      <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-[11px] font-black text-gray-500 group-hover:bg-white group-hover:text-blue-600 transition-colors shadow-sm">
-                        {{ project.name.substring(0, 2).toUpperCase() }}
-                      </div>
-                      <span class="text-[14px] font-black text-gray-800 group-hover:text-blue-600 transition-colors">{{ project.name }}</span>
+
+                  <!-- Loading Skeleton State -->
+                  <div v-if="loading" class="space-y-2 p-3">
+                    <div v-for="i in 3" :key="i" class="flex items-center gap-4 px-3 py-2 animate-pulse">
+                      <div class="w-10 h-10 bg-gray-100 rounded-xl"></div>
+                      <div class="h-4 bg-gray-100 rounded w-1/2"></div>
                     </div>
-                    <CheckIcon v-if="modelValue.client_id === project.id" class="w-5 h-5 text-blue-600" />
+                  </div>
+
+                  <!-- Project List -->
+                  <template v-else-if="filteredProjects.length > 0">
+                    <div 
+                      v-for="project in filteredProjects" 
+                      :key="project.id"
+                      @click="selectProject(project)"
+                      class="px-5 py-4 mx-3 rounded-2xl flex items-center justify-between cursor-pointer transition-all hover:bg-gray-50 group mb-1 last:mb-0"
+                      :class="{ 'bg-blue-50 text-blue-600': modelValue.client_id === project.id }"
+                    >
+                      <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-[11px] font-black text-gray-500 group-hover:bg-white group-hover:text-blue-600 transition-colors shadow-sm">
+                          {{ project.name.substring(0, 2).toUpperCase() }}
+                        </div>
+                        <span class="text-[14px] font-black text-gray-800 group-hover:text-blue-600 transition-colors" v-html="highlightText(project.name, projectSearchQuery)"></span>
+                      </div>
+                      <CheckIcon v-if="modelValue.client_id === project.id" class="w-5 h-5 text-blue-600" />
+                    </div>
+                  </template>
+
+                  <!-- Empty Search State -->
+                  <div v-else class="py-12 px-5 text-center space-y-3">
+                    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <MagnifyingGlassIcon class="w-8 h-8 text-gray-200" />
+                    </div>
+                    <p class="text-[14px] font-black text-gray-900 uppercase tracking-tight">Ничего не найдено</p>
+                    <p class="text-[11px] font-bold text-gray-400">Проект "{{ projectSearchQuery }}" не существует.</p>
+                    <button 
+                      @click="handleCreateNewAction"
+                      class="mt-4 px-6 py-2 bg-blue-100 text-blue-600 rounded-xl text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-all"
+                    >
+                      Создать этот проект?
+                    </button>
                   </div>
                 </div>
               </div>
@@ -196,6 +250,7 @@ const props = defineProps({
   modelValue: Object,
   projects: Array,
   isCreatingNewProject: Boolean,
+  loading: Boolean,
   error: String,
   showToken: Boolean
 })
@@ -237,6 +292,12 @@ const selectProject = (project) => {
   isDropdownOpen.value = false
 }
 
+const highlightText = (text, query) => {
+  if (!query) return text
+  const regex = new RegExp(`(${query})`, 'gi')
+  return text.replace(regex, '<span class="text-blue-600">$1</span>')
+}
+
 const handleCreateNewAction = () => {
   emit('update:isCreatingNewProject', true)
   updateForm({ client_id: null, client_name: '' })
@@ -253,3 +314,13 @@ const updateForm = (updates) => {
   emit('update:modelValue', { ...props.modelValue, ...updates })
 }
 </script>
+
+<style scoped>
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.05; }
+  50% { opacity: 0.15; }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+</style>

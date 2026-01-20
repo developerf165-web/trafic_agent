@@ -84,6 +84,7 @@
                 v-model="form"
                 v-model:isCreatingNewProject="isCreatingNewProject"
                 :projects="projects"
+                :loading="loadingStates.projects"
                 :error="error"
                 @next="nextStep"
               />
@@ -127,6 +128,7 @@
               <IntegrationStep5 
                 v-else-if="currentStep === 5"
                 :projectName="form.client_name"
+                :platform="form.platform"
                 :selectedProfileName="selectedProfile?.name || 'Не выбран'"
                 :selectedProfileLogin="form.account_id"
                 :currency="currentCurrency"
@@ -135,6 +137,12 @@
                 :secondaryGoalsList="secondaryGoalsList"
                 :syncDepth="form.sync_depth"
                 :autoSync="form.auto_sync"
+              />
+
+              <IntegrationSuccess 
+                v-else-if="currentStep === 6"
+                :projectName="form.client_name"
+                :platform="form.platform"
               />
             </div>
           </Transition>
@@ -184,13 +192,21 @@
           </button>
 
           <button 
-            v-else
+            v-else-if="currentStep === 5"
             @click="finishConnection"
             :disabled="isNextDisabled || loadingStates.finish"
             class="px-10 py-3.5 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 hover:-translate-y-0.5 active:translate-y-0 font-black text-[10px] uppercase tracking-widest disabled:opacity-50 disabled:translate-y-0 transition-all flex items-center gap-2 shadow-xl shadow-blue-200"
           >
             <div v-if="loadingStates.finish" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
             <span>{{ loadingStates.finish ? 'СОХРАНЕНИЕ...' : 'ПОДКЛЮЧИТЬ' }}</span>
+          </button>
+
+          <button 
+            v-else-if="currentStep === 6"
+            @click="$router.push('/settings')"
+            class="px-10 py-3.5 bg-black text-white rounded-2xl hover:bg-gray-900 hover:-translate-y-0.5 active:translate-y-0 font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-xl"
+          >
+            В НАСТРОЙКИ
           </button>
         </div>
       </div>
@@ -224,6 +240,7 @@ import IntegrationStep2 from '../../components/integration-steps/IntegrationStep
 import IntegrationStep3 from '../../components/integration-steps/IntegrationStep3.vue'
 import IntegrationStep4 from '../../components/integration-steps/IntegrationStep4.vue'
 import IntegrationStep5 from '../../components/integration-steps/IntegrationStep5.vue'
+import IntegrationSuccess from '../../components/integration-steps/IntegrationSuccess.vue'
 
 // Composables & API
 import { useProjects } from '../../composables/useProjects'
@@ -264,6 +281,31 @@ const {
 const isCreatingNewProject = ref(false)
 const loadingAuth = ref(false)
 
+const handleOAuthMessage = (event) => {
+  if (event.origin !== window.location.origin) return
+  
+  if (event.data?.type === 'oauth-success') {
+    const data = event.data.data
+    const integrationId = data.integration_id
+    
+    lastIntegrationId.value = integrationId
+    currentStep.value = 2
+    fetchIntegration(integrationId)
+    fetchProfiles(integrationId)
+    
+    if (data.trigger_agency_import) {
+       toaster.success('Аккаунт агентства успешно подключен!')
+    } else {
+       toaster.success(`${data.platform === 'YANDEX_DIRECT' ? 'Яндекс' : 'VK'} успешно подключен!`)
+    }
+    
+    loadingAuth.value = false
+  } else if (event.data?.type === 'oauth-error') {
+    error.value = event.data.message || 'Ошибка авторизации'
+    loadingAuth.value = false
+  }
+}
+
 const initYandexAuth = async () => {
   loadingAuth.value = true
   try {
@@ -273,7 +315,18 @@ const initYandexAuth = async () => {
     }
     const { data } = await api.get(`integrations/yandex/auth-url?redirect_uri=${encodeURIComponent(redirectUri)}`)
     if (data.url) {
-      window.location.href = data.url
+      const width = 600
+      const height = 750
+      const left = window.screen.width / 2 - width / 2
+      const top = window.screen.height / 2 - height / 2
+      const popup = window.open(data.url, 'oauthPopup', `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`)
+      
+      const checkPopup = setInterval(() => {
+        if (!popup || popup.closed) {
+          clearInterval(checkPopup)
+          if (loadingAuth.value) loadingAuth.value = false
+        }
+      }, 1000)
     }
   } catch (err) {
     console.error(err)
@@ -291,7 +344,18 @@ const initVKAuth = async () => {
     }
     const { data } = await api.get(`integrations/vk/auth-url?redirect_uri=${encodeURIComponent(redirectUri)}`)
     if (data.url) {
-      window.location.href = data.url
+      const width = 600
+      const height = 750
+      const left = window.screen.width / 2 - width / 2
+      const top = window.screen.height / 2 - height / 2
+      const popup = window.open(data.url, 'oauthPopup', `width=${width},height=${height},left=${left},top=${top},status=no,resizable=yes,scrollbars=yes`)
+
+      const checkPopup = setInterval(() => {
+        if (!popup || popup.closed) {
+          clearInterval(checkPopup)
+          if (loadingAuth.value) loadingAuth.value = false
+        }
+      }, 1000)
     }
   } catch (err) {
     console.error(err)
@@ -338,7 +402,8 @@ const stepLabels = {
   2: 'Выбор профиля',
   3: 'Рекламные кампании',
   4: 'Цели и конверсии',
-  5: 'Сводка настроек'
+  5: 'Сводка настроек',
+  6: 'Готово'
 }
 
 // Selectors Presence (Moved inline)
@@ -382,6 +447,8 @@ const nextStep = async () => {
     fetchGoals(lastIntegrationId.value)
   } else if (currentStep.value === 4) {
     currentStep.value = 5
+  } else if (currentStep.value === 5) {
+    // Handled by finishConnection
   }
 }
 
@@ -415,8 +482,10 @@ const toggleGoalSelection = (id) => {
 
 onMounted(() => {
   fetchProjects()
+  window.addEventListener('message', handleOAuthMessage)
   
   const resumeId = router.currentRoute.value.query.resume_integration_id
+// ... rest of logic
   const startStep = router.currentRoute.value.query.initial_step
   
   if (resumeId) {
@@ -429,22 +498,27 @@ onMounted(() => {
     if (currentStep.value === 4) fetchGoals(resumeId)
   }
 })
+
+import { onUnmounted } from 'vue'
+onUnmounted(() => {
+  window.removeEventListener('message', handleOAuthMessage)
+})
 </script>
 
 <style scoped>
 .fade-slide-enter-active,
 .fade-slide-leave-active {
-  transition: all 0.3s ease-out;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .fade-slide-enter-from {
   opacity: 0;
-  transform: translateX(20px);
+  transform: translateX(30px) scale(0.98);
 }
 
 .fade-slide-leave-to {
   opacity: 0;
-  transform: translateX(-20px);
+  transform: translateX(-30px) scale(0.98);
 }
 
 .animate-fade-in {

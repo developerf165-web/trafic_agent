@@ -57,11 +57,17 @@ onMounted(async () => {
     const integrationId = response.data.integration_id
     
     localStorage.removeItem('vk_auth_client_name')
-    toaster.success('VK Ads успешно подключен!')
     
-    // Redirect to dashboard with a flag to show campaign selection if needed
-    // or just show success. 
-    router.push(`/projects/create?new_integration_id=${integrationId}`) 
+    if (window.opener) {
+      window.opener.postMessage({ 
+        type: 'oauth-success', 
+        data: response.data 
+      }, window.location.origin)
+      window.close()
+    } else {
+      toaster.success('VK Ads успешно подключен!')
+      router.push(`/projects/create?new_integration_id=${integrationId}`) 
+    }
   } catch (err) {
     console.error(err)
     error.value = err.response?.data?.detail || 'Не удалось завершить подключение'

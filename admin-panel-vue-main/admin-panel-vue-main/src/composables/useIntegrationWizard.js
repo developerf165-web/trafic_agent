@@ -203,8 +203,8 @@ export function useIntegrationWizard() {
       }
 
       toaster.success("Интеграция успешно настроена!")
-      resetStore()
-      if (router) router.push('/settings')
+      currentStep.value = 6
+      // resetStore() // We don't reset yet so Step 6 can show info
     } catch (err) {
       error.value = "Ошибка при завершении настройки"
     } finally {
